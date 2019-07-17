@@ -5,7 +5,7 @@ library(grid)
 library(tidybayes)
 library(latex2exp)
 
-setwd("~/Research/zero_types/results/2018-04-11_simulation/")
+setwd("~/Research/zero_types/results/2019-07-10_simulation/")
 
 set.seed(4)
 options(mc.cores = parallel::detectCores())
@@ -125,9 +125,10 @@ fit.t3m3 <- stan("m3.stan", data=dat$type3, control=list(adapt_delta=0.9))
 
 ## Special Models ##
 # Type 0 
-fit.t1m0a <- stan("m0.stan", data=c(dat$type1, k=.05))
-fit.t1m0b <- stan("m0.stan", data=c(dat$type1, k=.5))
-fit.t1m0c <- stan("m0.stan", data=c(dat$type1, k=1))
+fit.t1m0a <- stan("m0.stan", data=c(dat$type1, k=.0005))
+fit.t1m0b <- stan("m0.stan", data=c(dat$type1, k=.05))
+fit.t1m0c <- stan("m0.stan", data=c(dat$type1, k=.5))
+fit.t1m0d <- stan("m0.stan", data=c(dat$type1, k=1))
 fit.t3m0 <- stan("m0.stan", data=c(dat$type3, k=.5))
 
 # Type IIa
@@ -144,28 +145,29 @@ fit.t2bBATCHm2a <- stan("m2a.stan", data=dat$type2bBATCH)
 
 
 fits <- list()
-fits$t1 <- list(`Model 0\n(k=0.05)` = fit.t1m0a, 
-                `Model 0\n(k=0.5)` = fit.t1m0b,
-                `Model 0\n(k=1.0)` = fit.t1m0c, 
-                `Model I` = fit.t1m1, 
-                `Model IIb` = fit.t1m2b, 
-                `Model III` = fit.t1m3)
-fits$t2a <- list(`Model I` = fit.t2am1, 
-                 `Model IIa` = fit.t2am2a,
-                 `Model IIb` = fit.t2am2b, 
-                 `Model III` = fit.t2am3)
-fits$t2b <- list(`Model I` = fit.t2bm1,
-                 `Model IIa` = fit.t2bm2a,
-                 `Model IIb` = fit.t2bm2b, 
-                 `Model III` = fit.t2bm3)
-fits$t2bBATCH <- list(`Model I` = fit.t2bBATCHm1,
-                      `Model IIa` = fit.t2bBATCHm2a,
-                      `Model IIb` = fit.t2bBATCHm2b, 
-                      `Model III` = fit.t2bBATCHm3)
-fits$t3 <- list(`Model 0\n(k=1.0)` = fit.t3m0,
-                `Model I` = fit.t3m1, 
-                `Model IIb` = fit.t3m2b, 
-                `Model III` = fit.t3m3)
+fits$t1 <- list(`PC\n(k=0.0005)` = fit.t1m0a,
+                `PC\n(k=0.05)` = fit.t1m0b, 
+                `PC\n(k=0.5)` = fit.t1m0c,
+                `PC\n(k=1.0)` = fit.t1m0d, 
+                `Base` = fit.t1m1, 
+                `ZIP` = fit.t1m2b, 
+                `ZILN` = fit.t1m3)
+fits$t2a <- list(`Base` = fit.t2am1, 
+                 `RI` = fit.t2am2a,
+                 `ZIP` = fit.t2am2b, 
+                 `ZILN` = fit.t2am3)
+fits$t2b <- list(`Base` = fit.t2bm1,
+                 `RI` = fit.t2bm2a,
+                 `ZIP` = fit.t2bm2b, 
+                 `ZILN` = fit.t2bm3)
+fits$t2bBATCH <- list(`Base` = fit.t2bBATCHm1,
+                      `RI` = fit.t2bBATCHm2a,
+                      `ZIP` = fit.t2bBATCHm2b, 
+                      `ZILN` = fit.t2bBATCHm3)
+fits$t3 <- list(`PC\n(k=1.0)` = fit.t3m0,
+                `Base` = fit.t3m1, 
+                `ZIP` = fit.t3m2b, 
+                `ZILN` = fit.t3m3)
 
 # Plots for Type I --------------------------------------------------------
 
@@ -178,10 +180,15 @@ pt1 <- fits$t1 %>%
   map(gather, param, val, -iter) %>% 
   bind_rows(.id="model") %>% 
   filter(param != "lambda0") %>%
-  mutate(model = factor(model, levels=c("Model III", "Model IIb", "Model I", 
-                                        "Model 0\n(k=0.05)", "Model 0\n(k=0.5)", 
-                                        "Model 0\n(k=1.0)"))) %>% 
-  select(-param) %>% 
+  mutate(model = factor(model, levels=c("ZILN", "ZIP", "Base", 
+                                        "PC\n(k=0.0005)", "PC\n(k=0.05)", "PC\n(k=0.5)", 
+                                        "PC\n(k=1.0)"))) %>% 
+  select(-param)
+cdfs <- pt1 %>% 
+  group_by(model) %>% 
+  summarise(cdf.true = ecdf(val)(llambda)) %>% 
+  mutate(cdf.true = signif(cdf.true, 3))
+pt1 <- pt1 %>% 
   ggplot(aes(x=val, y=model)) +
   geom_halfeyeh(.prob=c(.95, .50)) + 
   geom_segment(x = llambda, xend = llambda, y = .7, yend=1.3, color="darkred") +
@@ -190,7 +197,10 @@ pt1 <- fits$t1 %>%
   geom_segment(x = llambda, xend = llambda, y = 3.7, yend=4.3, color="darkred") +
   geom_segment(x = llambda, xend = llambda, y = 4.7, yend=5.3, color="darkred") +
   geom_segment(x = llambda, xend = llambda, y = 5.7, yend=6.3, color="darkred") +
+  geom_segment(x = llambda, xend = llambda, y = 5.7, yend=7.3, color="darkred") +
   theme_minimal() +
+  geom_label(data=cdfs, aes(x=0, y=as.numeric(model)+.3, label=cdf.true), size=2.5, 
+             label.padding=unit(0.1, "lines"))+
   theme(axis.title.y=element_blank(), 
         axis.title.x=element_blank(), 
         axis.text.x=element_text(size=12), 
@@ -212,7 +222,12 @@ pt2a <- fits$t2a %>%
   bind_rows(.id="model") %>% 
   filter(param != "lambda0") %>% 
   select(-param) %>% 
-  mutate(model = factor(model, levels=c("Model III", "Model IIb",  "Model IIa", "Model I"))) %>% 
+  mutate(model = factor(model, levels=c("ZILN", "ZIP",  "RI", "Base")))
+cdfs <- pt2a %>% 
+  group_by(model) %>% 
+  summarise(cdf.true = ecdf(val)(llambda)) %>% 
+  mutate(cdf.true = signif(cdf.true, 3))
+pt2a <- pt2a %>% 
   ggplot(aes(x=val, y=model)) +
   geom_halfeyeh(.prob=c(.95, .50)) + 
   geom_segment(x = llambda, xend = llambda, y = .7, yend=1.3, color="darkred") +
@@ -220,6 +235,8 @@ pt2a <- fits$t2a %>%
   geom_segment(x = llambda, xend = llambda, y = 2.7, yend=3.3, color="darkred") +
   geom_segment(x = llambda, xend = llambda, y = 3.7, yend=4.3, color="darkred") +
   theme_minimal() +
+  geom_label(data=cdfs, aes(x=0, y=as.numeric(model)+.3, label=cdf.true), size=2.5, 
+             label.padding=unit(0.1, "lines"))+
   theme(axis.title.y=element_blank(), 
         axis.title.x=element_blank(), 
         axis.text.x=element_text(size=12), 
@@ -239,7 +256,12 @@ pt2b <- fits$t2b %>%
   bind_rows(.id="model") %>% 
   filter(param != "lambda0") %>% 
   select(-param) %>% 
-  mutate(model = factor(model, levels=c("Model III", "Model IIb", "Model IIa", "Model I"))) %>% 
+  mutate(model = factor(model, levels=c("ZILN", "ZIP", "RI", "Base")))
+cdfs <- pt2b %>% 
+  group_by(model) %>% 
+  summarise(cdf.true = ecdf(val)(llambda)) %>% 
+  mutate(cdf.true = signif(cdf.true, 3))
+pt2b <- pt2b %>% 
   ggplot(aes(x=val, y=model)) +
   geom_halfeyeh(.prob=c(.95, .50)) + 
   geom_segment(x = llambda, xend = llambda, y = .7, yend=1.3, color="darkred") +
@@ -247,6 +269,8 @@ pt2b <- fits$t2b %>%
   geom_segment(x = llambda, xend = llambda, y = 2.7, yend=3.3, color="darkred") +
   geom_segment(x = llambda, xend = llambda, y = 3.7, yend=4.3, color="darkred") +
   theme_minimal() +
+  geom_label(data=cdfs, aes(x=0, y=as.numeric(model)+.3, label=cdf.true), size=2.5, 
+             label.padding=unit(0.1, "lines"))+
   theme(axis.title.y=element_blank(), 
         axis.title.x=element_blank(), 
         axis.text.x=element_text(size=12), 
@@ -266,7 +290,12 @@ pt2bBATCH <- fits$t2bBATCH %>%
   bind_rows(.id="model") %>% 
   filter(param != "lambda0") %>% 
   select(-param) %>% 
-  mutate(model = factor(model, levels=c("Model III", "Model IIb", "Model IIa", "Model I"))) %>% 
+  mutate(model = factor(model, levels=c("ZILN", "ZIP", "RI", "Base")))
+cdfs <- pt2bBATCH %>% 
+  group_by(model) %>% 
+  summarise(cdf.true = ecdf(val)(llambda)) %>% 
+  mutate(cdf.true = signif(cdf.true, 3))
+pt2bBATCH <- pt2bBATCH %>% 
   ggplot(aes(x=val, y=model)) +
   geom_halfeyeh(.prob=c(.95, .50)) + 
   geom_segment(x = llambda, xend = llambda, y = .7, yend=1.3, color="darkred") +
@@ -274,23 +303,31 @@ pt2bBATCH <- fits$t2bBATCH %>%
   geom_segment(x = llambda, xend = llambda, y = 2.7, yend=3.3, color="darkred") +
   geom_segment(x = llambda, xend = llambda, y = 3.7, yend=4.3, color="darkred") +
   theme_minimal() +
+  geom_label(data=cdfs, aes(x=0, y=as.numeric(model)+.3, label=cdf.true), size=2.5, 
+             label.padding=unit(0.1, "lines"))+
   theme(axis.title.y=element_blank(), 
         axis.title.x=element_blank(), 
         axis.text.x=element_text(size=12), 
         axis.text.y=element_text(size=12))
-ggsave("type2bBATCH.pdf", plot=pt2bBATCH, height=2.5, width=4, units="in")
+ggsave("type2bBATCH.pdf", plot=pt2bBATCH, height=1.8, width=4, units="in")
 
 
 # Plots for Type III ------------------------------------------------------
 
+tmp <- data.frame(lambda =lambdas3, person=factor(1:length(lambdas3))) %>% 
+  mutate(person = factor(paste("Person",person)))
+#llambdas_vector <- tmp$lambda
+#names(llambdas_vector) <- tmp$person
+#rm(tmp)
+
 # Annotations
 llambdas <- data.frame(lambda =lambdas3, person=factor(1:length(lambdas3))) %>% 
-  bind_rows(., ., ., .id="model") %>% 
+  bind_rows(., ., .,., .id="model") %>% 
   mutate(model = as.double(model)) %>% 
   mutate(person = factor(paste("Person",person))) %>% 
   rename(val = lambda)
 llambdas.log <- data.frame(lambda =lambdas3, person=factor(1:length(lambdas3))) %>% 
-  bind_rows(., ., ., .id="model") %>% 
+  bind_rows(., ., .,., .id="model") %>% 
   mutate(model = as.double(model)) %>% 
   filter(person!=2) %>% 
   mutate(person = factor(paste("Person",person))) %>% 
@@ -305,8 +342,15 @@ pt3 <- fits$t3 %>%
   bind_rows(.id="model") %>% 
   filter(param != "lambda0") %>% 
   select(-param) %>% 
-  mutate(model = factor(model, levels=c("Model III", "Model IIb", "Model I", "Model 0\n(k=1.0)"))) %>% 
-  mutate(person = factor(paste("Person",person))) %>% 
+  mutate(model = factor(model, levels=c("ZILN", "ZIP", "Base", "PC\n(k=1.0)"))) %>% 
+  mutate(person = factor(paste("Person",person)))
+cdfs <- pt3 %>% 
+  left_join(tmp, by="person") %>%
+  group_by(model, person) %>% 
+  summarise(lambda=unique(lambda), 
+            cdf.true = ecdf(val)(lambda)) %>% 
+  mutate(cdf.true = signif(cdf.true, 3))
+pt3 <- pt3 %>% 
   ggplot(aes(x=val, y = model)) +
   geom_halfeyeh() +
   facet_grid(person~.) + 
@@ -314,6 +358,8 @@ pt3 <- fits$t3 %>%
                color="darkred")+
   coord_cartesian(xlim=c(0, 7)) +
   theme_minimal() +
+  geom_label(data=cdfs, aes(x=0, y=as.numeric(model)+.3, label=cdf.true), size=2.5, 
+             label.padding=unit(0.1, "lines"))+
   theme(axis.title.y=element_blank(), 
         axis.title.x=element_blank(), 
         axis.text.x=element_text(size=12), 
@@ -330,7 +376,7 @@ pt3log <- fits$t3 %>%
   bind_rows(.id="model") %>% 
   filter(param != "lambda0") %>% 
   select(-param) %>% 
-  mutate(model = factor(model, levels=c("Model III", "Model IIb", "Model I", "Model 0\n(k=1.0)"))) %>% 
+  mutate(model = factor(model, levels=c("ZILN", "ZIP", "Base", "PC\n(k=1.0)"))) %>% 
   filter(person==2) %>% 
   mutate(person = factor(paste("Person",person))) %>% 
   ggplot(aes(x=val, y = model)) +
@@ -351,7 +397,47 @@ ggsave("type3.log.pdf", plot=pt3log, height=2, width=5, units="in")
 
 
 
-# How many Samples to Estimate Dataset 1 with Model IIb? ------------------
+# Plots of Differential Expression for Type III Simulation ----------------
+
+# Annotations
+llambdas <- data.frame(lambda =lambdas3, person=factor(1:length(lambdas3))) %>% 
+  spread(person, lambda) %>% 
+  transmute(DE = log(`1`/`3`)) %>% 
+  bind_rows(.,.,.,., .id="model") %>% 
+  mutate(model = as.double(model))
+
+
+
+# Main Plot (Not Log Scale)
+# Main Plot (Not Log Scale)
+pt3 <- fits$t3 %>% 
+  map(rstan::extract, pars=c("lambda")) %>% 
+  modify_depth(2, gather_array,val, iter, person) %>% 
+  map(bind_rows, .id="param") %>% 
+  bind_rows(.id="model") %>% 
+  filter(param != "lambda0") %>% 
+  select(-param) %>% 
+  mutate(model = factor(model, levels=c("ZILN", "ZIP", "Base", "PC\n(k=1.0)"))) %>% 
+  mutate(person = factor(paste("Person",person))) %>% 
+  filter(person %in% c("Person 1", "Person 3")) %>% 
+  spread(person, val) %>% 
+  mutate(DE = log(`Person 1`/`Person 3`)) %>% 
+  ggplot(aes(x=DE, y = model)) +
+  geom_halfeyeh() +
+  geom_segment(data=llambdas, aes(xend=DE,y=model-.3, yend=model+.3), 
+               color="darkred")+
+  coord_cartesian(xlim=c(-4, 4)) + 
+  theme_minimal() + 
+  theme(axis.title.y=element_blank(), 
+        axis.title.x=element_blank(), 
+        axis.text.x=element_text(size=12), 
+        axis.text.y=element_text(size=12), 
+        strip.text.y = element_text(size=12, angle = 0))
+ggsave("type3DE.pdf", plot=pt3, height=2.5, width=4, units="in")
+
+
+
+# How many Samples to Estimate Dataset 1 with ZIP? ------------------
 
 
 # Type I Zeroes
@@ -422,7 +508,7 @@ save(posteriors_tidy, file="posteriors_tidy.RData")
 posteriors_tidy %>% 
   filter(mean < 1000) %>% 
   filter(n %in% ns) %>% 
-  mutate(model = ifelse(model=="m1", "Model I", "Model IIb")) %>% 
+  mutate(model = ifelse(model=="m1", "Base", "ZIP")) %>% 
   rename(Model = model) %>% 
   ggplot(aes(x = factor(n), y = mean, fill= Model)) +
   geom_hline(yintercept=0.5, color="darkred") + 
@@ -431,11 +517,99 @@ posteriors_tidy %>%
   xlab("Number of Samples") +
   theme(axis.text = element_text(size=12), 
         axis.title.y = element_blank()) +
-  scale_fill_brewer(palette = "Set1")
+  scale_fill_brewer(palette = "Set1") +
+  ylim(c(0,2))
 ggsave("posterior_consistency.pdf", height=4, width=7)
 
 
-# Posterior correlation of theta and lambda in model IIb ------------------
+# How many Samples to Estimate Dataset 1 with ZIP? - lower lambda--------------
+
+
+# Type I Zeroes
+
+make_dat1 <- function(n){
+  lambda1 <- .1
+  type1 <- rpois(n, lambda1)
+  # return dataframe list
+  type1 <- within(list(), {
+    y <- type1
+    z <- rep(1, length(y))
+    x <- rep(1, length(y))
+    N <- length(y)
+    N_person <- 1
+    N_batch <- 1
+    
+    lambda_prior <- lambda_prior
+    theta_prior <- theta_prior
+    gamma_prior <- gamma_prior
+  })
+  return(type1)
+}
+
+posteriors <- list()
+# n1 <- 100
+n2 <- 30
+# ns <-  seq(5, n1, by=5)
+ns <- c(5, 10, 15, 20, 30, 40, 60, 80, 120, 160, 240, 320, 640, 960, 1280)
+k <- 1
+for (i in ns){
+  for (j in 1:n2){
+    print(i)
+    fit <- stan("m2b.stan", data=make_dat1(i), iter = 4000, chains=1)
+    l <- rstan::extract(fit, pars="lambda")$lambda[,1]
+    p <- c(i,quantile(l, c(0.025, 0.975)), mean(l))
+    names(p) <- c("n","p2.5", "p97.5", "mean")
+    posteriors[[k]] <- p
+    k <- k+1
+  }
+}    
+posteriors_tidy <- posteriors %>% 
+  do.call(rbind,.) %>% 
+  as.tibble() %>% 
+  mutate(model="m2b")
+
+posteriors <- list()
+k <- 1
+for (i in ns){
+  for (j in 1:n2){
+    print(i)
+    fit <- stan("m1.stan", data=make_dat1(i), iter = 4000, chains=1)
+    l <- rstan::extract(fit, pars="lambda")$lambda[,1]
+    p <- c(i,quantile(l, c(0.025, 0.975)), mean(l))
+    names(p) <- c("n","p2.5", "p97.5", "mean")
+    posteriors[[k]] <- p  
+    k <- k+1
+  }
+}    
+posteriors_tidy <- posteriors %>% 
+  do.call(rbind,.) %>% 
+  as.tibble() %>% 
+  mutate(model="m1") %>% 
+  bind_rows(posteriors_tidy)
+
+save(posteriors_tidy, file="posteriors_tidy.RData")
+# load("posteriors_tidy.RData")
+
+posteriors_tidy %>% 
+  filter(mean < 1000) %>% 
+  filter(n %in% ns) %>% 
+  mutate(model = ifelse(model=="m1", "Base", "ZIP")) %>% 
+  rename(Model = model) %>% 
+  ggplot(aes(x = factor(n), y = mean, fill= Model)) +
+  geom_hline(yintercept=0.1, color="darkred") + 
+  geom_boxplot() + 
+  theme_minimal()+
+  xlab("Number of Samples") +
+  theme(axis.text = element_text(size=12), 
+        axis.title.y = element_blank()) +
+  scale_fill_brewer(palette = "Set1") +
+  ylim(c(0,.75))
+ggsave("posterior_consistency_low_lambda.pdf", height=4, width=7)
+
+
+
+
+# Posterior correlation of theta and lambda in ZIP ------------------
 
 logit <- function(x){log(x/(1-x))}
 
