@@ -151,23 +151,23 @@ fits$t1 <- list(`PC\n(k=0.0005)` = fit.t1m0a,
                 `PC\n(k=1.0)` = fit.t1m0d, 
                 `Base` = fit.t1m1, 
                 `ZIP` = fit.t1m2b, 
-                `ZILN` = fit.t1m3)
+                `BZ` = fit.t1m3)
 fits$t2a <- list(`Base` = fit.t2am1, 
                  `RI` = fit.t2am2a,
                  `ZIP` = fit.t2am2b, 
-                 `ZILN` = fit.t2am3)
+                 `BZ` = fit.t2am3)
 fits$t2b <- list(`Base` = fit.t2bm1,
                  `RI` = fit.t2bm2a,
                  `ZIP` = fit.t2bm2b, 
-                 `ZILN` = fit.t2bm3)
+                 `BZ` = fit.t2bm3)
 fits$t2bBATCH <- list(`Base` = fit.t2bBATCHm1,
                       `RI` = fit.t2bBATCHm2a,
                       `ZIP` = fit.t2bBATCHm2b, 
-                      `ZILN` = fit.t2bBATCHm3)
+                      `BZ` = fit.t2bBATCHm3)
 fits$t3 <- list(`PC\n(k=1.0)` = fit.t3m0,
                 `Base` = fit.t3m1, 
                 `ZIP` = fit.t3m2b, 
-                `ZILN` = fit.t3m3)
+                `BZ` = fit.t3m3)
 
 # Plots for Type I --------------------------------------------------------
 
@@ -180,7 +180,7 @@ pt1 <- fits$t1 %>%
   map(gather, param, val, -iter) %>% 
   bind_rows(.id="model") %>% 
   filter(param != "lambda0") %>%
-  mutate(model = factor(model, levels=c("ZILN", "ZIP", "Base", 
+  mutate(model = factor(model, levels=c("BZ", "ZIP", "Base", 
                                         "PC\n(k=0.0005)", "PC\n(k=0.05)", "PC\n(k=0.5)", 
                                         "PC\n(k=1.0)"))) %>% 
   select(-param)
@@ -190,7 +190,7 @@ cdfs <- pt1 %>%
   mutate(cdf.true = signif(cdf.true, 3))
 pt1 <- pt1 %>% 
   ggplot(aes(x=val, y=model)) +
-  geom_halfeyeh(.prob=c(.95, .50)) + 
+  geom_halfeyeh(.prob=c(.95, .50), scale="width") + 
   geom_segment(x = llambda, xend = llambda, y = .7, yend=1.3, color="darkred") +
   geom_segment(x = llambda, xend = llambda, y = 1.7, yend=2.3, color="darkred") +
   geom_segment(x = llambda, xend = llambda, y = 2.7, yend=3.3, color="darkred") +
@@ -222,14 +222,14 @@ pt2a <- fits$t2a %>%
   bind_rows(.id="model") %>% 
   filter(param != "lambda0") %>% 
   select(-param) %>% 
-  mutate(model = factor(model, levels=c("ZILN", "ZIP",  "RI", "Base")))
+  mutate(model = factor(model, levels=c("BZ", "ZIP",  "RI", "Base")))
 cdfs <- pt2a %>% 
   group_by(model) %>% 
   summarise(cdf.true = ecdf(val)(llambda)) %>% 
   mutate(cdf.true = signif(cdf.true, 3))
 pt2a <- pt2a %>% 
   ggplot(aes(x=val, y=model)) +
-  geom_halfeyeh(.prob=c(.95, .50)) + 
+  geom_halfeyeh(.prob=c(.95, .50), scale="width") + 
   geom_segment(x = llambda, xend = llambda, y = .7, yend=1.3, color="darkred") +
   geom_segment(x = llambda, xend = llambda, y = 1.7, yend=2.3, color="darkred") +
   geom_segment(x = llambda, xend = llambda, y = 2.7, yend=3.3, color="darkred") +
@@ -256,14 +256,14 @@ pt2b <- fits$t2b %>%
   bind_rows(.id="model") %>% 
   filter(param != "lambda0") %>% 
   select(-param) %>% 
-  mutate(model = factor(model, levels=c("ZILN", "ZIP", "RI", "Base")))
+  mutate(model = factor(model, levels=c("BZ", "ZIP", "RI", "Base")))
 cdfs <- pt2b %>% 
   group_by(model) %>% 
   summarise(cdf.true = ecdf(val)(llambda)) %>% 
   mutate(cdf.true = signif(cdf.true, 3))
 pt2b <- pt2b %>% 
   ggplot(aes(x=val, y=model)) +
-  geom_halfeyeh(.prob=c(.95, .50)) + 
+  geom_halfeyeh(.prob=c(.95, .50), scale="width") + 
   geom_segment(x = llambda, xend = llambda, y = .7, yend=1.3, color="darkred") +
   geom_segment(x = llambda, xend = llambda, y = 1.7, yend=2.3, color="darkred") +
   geom_segment(x = llambda, xend = llambda, y = 2.7, yend=3.3, color="darkred") +
@@ -290,14 +290,14 @@ pt2bBATCH <- fits$t2bBATCH %>%
   bind_rows(.id="model") %>% 
   filter(param != "lambda0") %>% 
   select(-param) %>% 
-  mutate(model = factor(model, levels=c("ZILN", "ZIP", "RI", "Base")))
+  mutate(model = factor(model, levels=c("BZ", "ZIP", "RI", "Base")))
 cdfs <- pt2bBATCH %>% 
   group_by(model) %>% 
   summarise(cdf.true = ecdf(val)(llambda)) %>% 
   mutate(cdf.true = signif(cdf.true, 3))
 pt2bBATCH <- pt2bBATCH %>% 
   ggplot(aes(x=val, y=model)) +
-  geom_halfeyeh(.prob=c(.95, .50)) + 
+  geom_halfeyeh(.prob=c(.95, .50), scale="width") + 
   geom_segment(x = llambda, xend = llambda, y = .7, yend=1.3, color="darkred") +
   geom_segment(x = llambda, xend = llambda, y = 1.7, yend=2.3, color="darkred") +
   geom_segment(x = llambda, xend = llambda, y = 2.7, yend=3.3, color="darkred") +
@@ -342,7 +342,7 @@ pt3 <- fits$t3 %>%
   bind_rows(.id="model") %>% 
   filter(param != "lambda0") %>% 
   select(-param) %>% 
-  mutate(model = factor(model, levels=c("ZILN", "ZIP", "Base", "PC\n(k=1.0)"))) %>% 
+  mutate(model = factor(model, levels=c("BZ", "ZIP", "Base", "PC\n(k=1.0)"))) %>% 
   mutate(person = factor(paste("Person",person)))
 cdfs <- pt3 %>% 
   left_join(tmp, by="person") %>%
@@ -352,7 +352,7 @@ cdfs <- pt3 %>%
   mutate(cdf.true = signif(cdf.true, 3))
 pt3 <- pt3 %>% 
   ggplot(aes(x=val, y = model)) +
-  geom_halfeyeh() +
+  geom_halfeyeh(.width=c(.95, .50), scale="width") +
   facet_grid(person~.) + 
   geom_segment(data=llambdas, aes(xend=val,y=model-.3, yend=model+.3), 
                color="darkred")+
@@ -376,11 +376,11 @@ pt3log <- fits$t3 %>%
   bind_rows(.id="model") %>% 
   filter(param != "lambda0") %>% 
   select(-param) %>% 
-  mutate(model = factor(model, levels=c("ZILN", "ZIP", "Base", "PC\n(k=1.0)"))) %>% 
+  mutate(model = factor(model, levels=c("BZ", "ZIP", "Base", "PC\n(k=1.0)"))) %>% 
   filter(person==2) %>% 
   mutate(person = factor(paste("Person",person))) %>% 
   ggplot(aes(x=val, y = model)) +
-  geom_halfeyeh() +
+  geom_halfeyeh(scale="width") +
   facet_grid(person~.) + 
   #geom_segment(data=llambdas.log, aes(xend=val,y=model-.3, yend=model+.3), 
   #             color="darkred")+
@@ -417,13 +417,13 @@ pt3 <- fits$t3 %>%
   bind_rows(.id="model") %>% 
   filter(param != "lambda0") %>% 
   select(-param) %>% 
-  mutate(model = factor(model, levels=c("ZILN", "ZIP", "Base", "PC\n(k=1.0)"))) %>% 
+  mutate(model = factor(model, levels=c("BZ", "ZIP", "Base", "PC\n(k=1.0)"))) %>% 
   mutate(person = factor(paste("Person",person))) %>% 
   filter(person %in% c("Person 1", "Person 3")) %>% 
   spread(person, val) %>% 
   mutate(DE = log(`Person 1`/`Person 3`)) %>% 
   ggplot(aes(x=DE, y = model)) +
-  geom_halfeyeh() +
+  geom_halfeyeh(scale="width") +
   geom_segment(data=llambdas, aes(xend=DE,y=model-.3, yend=model+.3), 
                color="darkred")+
   coord_cartesian(xlim=c(-4, 4)) + 

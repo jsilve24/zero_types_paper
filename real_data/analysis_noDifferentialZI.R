@@ -22,7 +22,7 @@ library(readxl)
 
 set.seed(343421)
 
-setwd("~/Research/zero_types/results/2019-12-10_real_data/")
+setwd("~/Research/zero_types/results/2020-01-09_real_data_NoDifferentialZI/")
 
 # utility functions -------------------------------------------------------
 
@@ -160,9 +160,11 @@ load_haglund <- function(){
 
 
 fitZI_zinbwave <- function(data){
-  fit <- zinbFit(Y=data$Y, X=t(data$X))
+  fit <- zinbFit(Y=data$Y, X=t(data$X), 
+                 # now turn off differential ZI
+                 which_X_pi=1L, which_V_pi=1L)
   DE <- getBeta_mu(fit)[2,]
-  DiffZI <- getBeta_pi(fit)[2,] 
+  DiffZI <- getBeta_pi(fit)[1,] 
   return(list(DE=DE, DiffZI=DiffZI, Y=data$Y, X=data$X, group_names=data$group_names))
 }
 
@@ -246,10 +248,10 @@ plot_DE <- function(summary_fits){
   focus <- identify_focus(summary_fits)
   p <- summary_fits %>% 
     mutate(label = ifelse(gene %in% focus, as.character(gene), NA )) 
-  if (!is.null(summary_fits$DiffZI)) p <- mutate(p, `Differential\nZero-Inflation` = DiffZI)
+  if (!is.null(summary_fits$DiffZI)) p <- mutate(p, `Zero-Inflation` = DiffZI)
   p <- ggplot(p, aes(x=NZI, y=ZI))
   if (!is.null(summary_fits$DiffZI)){
-    p <- p + geom_jitter(aes(color=`Differential\nZero-Inflation`), alpha=1)
+    p <- p + geom_jitter(aes(color=`Zero-Inflation`), alpha=1)
   } else {
     p <- p + geom_jitter(alpha=1)
   }
@@ -319,19 +321,24 @@ run_and_save <- function(data, fn){
   
   # A few key statistics
   if (!is.null(summary_fits$DiffZI)){
+    test <- broom::tidy(cor.test(summary_fits$DiffZI, abs(summary_fits$DiffDE), method="spearman"))
+    write.table(test, file=paste0("ZI_AbsValDiffDE_corr_",fn,".tsv"))
+  }
+  
+  if (!is.null(summary_fits$DiffZI)){
     test <- broom::tidy(cor.test(summary_fits$DiffZI, summary_fits$DiffDE, method="spearman"))
-    write.table(test, file=paste0("DiffZI_DiffDE_corr_",fn,".tsv"))
+    write.table(test, file=paste0("ZI_DiffDE_corr_",fn,".tsv"))
   }
 }
 
 
 
 summarize_datasets <- function(l){
-  ns <- c("Sparsity")
+  ns <- c("Sparsity", "nCategories")
   summary_fxn <- function(x){
-    out <- rep(0, 1)
-    names(out) <- ns
-    out["Sparsity"] <- sum(x==0)/prod(dim(x))
+    out <- list()
+    out$Sparsity <- sum(x==0)/prod(dim(x))
+    out$nCategories <- nrow(x)
     return(out)
   }
   
